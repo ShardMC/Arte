@@ -34,36 +34,35 @@ public class ArteCommand implements TabExecutor {
         if (!sender.hasPermission("arte.command"))
             return true;
 
-        if (args[0].equals("reload")) {
-            this.arte.config().reload();
-
-            new Thread(() -> {
-                this.arte.getPackManager().reload();
-
-                scheduler.runTask(this.arte, () -> {
-                    sender.sendMessage("[Arte] Done!");
-
-                    for (Player player : this.arte.getServer().getOnlinePlayers()) {
-                        this.arte.getPackManager().apply(player);
-                    }
-                });
-            }).start();
+        if (args.length == 0) {
+            sender.sendMessage("[Arte] No arguments given!");
+            return true;
         }
 
-        if (args[0].equals("clean")) {
-            new Thread(() -> {
+        new Thread(switch (args[0]) {
+            case "reload" -> {
+                this.arte.config().reload();
+                yield (() -> {
+                    this.arte.getPackManager().reload();
+
+                    scheduler.runTask(this.arte, () -> {
+                        sender.sendMessage("[Arte] Done!");
+
+                        for (Player player : this.arte.getServer().getOnlinePlayers())
+                            this.arte.getPackManager().apply(player);
+                    });
+                });
+            }
+            case "clean" -> (() -> {
                 try {
                     this.arte.getPackManager().getZipper().clean();
-
-                    scheduler.runTask(this.arte, () ->
-                            sender.sendMessage("[Arte] Done!")
-                    );
+                    scheduler.runTask(this.arte, () -> sender.sendMessage("[Arte] Done!"));
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-            }).start();
-        }
-
+            });
+            default -> (() -> sender.sendMessage("[Arte] Unexpected argument: " + args[0]));
+        }).start();
         return true;
     }
 
